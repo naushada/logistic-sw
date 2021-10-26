@@ -1,6 +1,3 @@
-sudo docker build -t --force-rm granada-engine:1.0 .
-
-
 # get and configure an image
 FROM ubuntu:focal
 ENV TZ=Asia/Calcutta
