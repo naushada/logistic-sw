@@ -1,4 +1,3 @@
-# get and configure an image
 FROM ubuntu:focal
 ENV TZ=Asia/Calcutta
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
@@ -11,40 +10,6 @@ RUN apt-get install -y --no-install-recommends \
     libssl-dev \
     wget \
     zlib1g-dev
-
-################## Webgui section ###############################
-
-FROM node:latest AS gui-build
-RUN cd /root
-RUN mkdir webgui && cd webgui
-RUN mkdir webclient && cd webclient
-WORKDIR /root/webgui/webclient
-RUN git clone https://github.com/naushada/bayt.git
-RUN cd bayt/sw
-RUN cp -r /root/webgui/webclient/bayt/sw/node_modules/primeng /tmp
-RUN cp -r /root/webgui/webclient/bayt/sw/node_modules/primeicons /tmp
-RUN cp -r /root/webgui/webclient/bayt/sw/node_modules/ngx-draggable-resize /tmp
-
-
-##########3 installing dependencies node_module ######################
-
-RUN apt-get -y update
-RUN apt-get -y upgrade
-RUN apt-get -y install nodejs npm
-WORKDIR /root/webgui/webclient/bayt/sw
-RUN npm install
-
-######## copy some packages from local to container ##############################
-
-RUN cp -r /tmp/primeng /root/webgui/webclient/bayt/sw/node_modules/
-RUN cp -r /tmp/primeicons /root/webgui/webclient/bayt/sw/node_modules/
-RUN cp -r /tmp/ngx-draggable-resize /root/webgui/webclient/bayt/sw/node_modules/
-
-##### Compile the Angular webgui #################
-RUN npm install -g @angular/cli
-
-WORKDIR /root/webgui/webclient/bayt/sw
-RUN ng build --configuration production --aot --base-href /bayt/
 
 # get and build ACE
 WORKDIR /root
@@ -70,9 +35,8 @@ WORKDIR /root/mongo-c/mongo-c-driver/build
 RUN cmake ..
 RUN make && make install
 
-# For mongo-cxx-driver - cpp driver to interface with mongo DB
 WORKDIR /root/mongo-cxx
-RUN git clone -b releases/v3.4 https://github.com/mongodb/mongo-cxx-driver.git
+RUN git clone -b releases/v3.5 https://github.com/mongodb/mongo-cxx-driver.git
 RUN cd mongo-cxx-driver
 
 WORKDIR /root/mongo-cxx/mongo-cxx-driver/build
@@ -80,16 +44,66 @@ RUN cmake ..  -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local
 RUN make && make install
 RUN ldconfig
 
-# Granada Engine - A microservice that interface to mongo-cxx DB
 WORKDIR /root
 RUN git clone https://github.com/naushada/granada.git
 RUN cd granada
-RUN mkdir ix86_64
-WORKDIR /root/granada/ix86_64
+RUN mkdir ix86_64x
+WORKDIR /root/granada/ix86_64x
 RUN cmake .. && make
 
-RUN cd ../ && mkdir webgui && cd webgui && mkdir webclient && cd webclient
-COPY --from=gui-build /root/webgui/webclient/bayt/sw/dist/sw .
+#node installation
+#FROM node:latest AS gui-build
+RUN apt-get -y update
+RUN apt-get -y upgrade
+RUN apt-get -y install build-essential
+#RUN apt-get -y install nodejs npm
 
-WORKDIR /root/granada/ix86_64
+WORKDIR /root
+RUN mkdir webgui && cd webgui
+RUN mkdir webclient && cd webclient
+
+WORKDIR /root/webgui/webclient
+RUN git clone https://github.com/naushada/bayt.git
+RUN cd bayt/sw
+RUN cp -r /root/webgui/webclient/bayt/sw/node_modules/primeng /tmp
+RUN cp -r /root/webgui/webclient/bayt/sw/node_modules/primeicons /tmp
+RUN cp -r /root/webgui/webclient/bayt/sw/node_modules/ngx-draggable-resize /tmp
+
+
+##########3 installing dependencies node_module ######################
+RUN apt-get -y install curl
+RUN curl -sL https://deb.nodesource.com/setup_14.x | bash -
+RUN apt-get -y install nodejs
+
+RUN npm install
+WORKDIR /root/webgui/webclient/bayt/sw
+
+######## copy some packages from local to container ##############################
+
+RUN cp -r /tmp/primeng /root/webgui/webclient/bayt/sw/node_modules/
+RUN cp -r /tmp/primeicons /root/webgui/webclient/bayt/sw/node_modules/
+RUN cp -r /tmp/ngx-draggable-resize /root/webgui/webclient/bayt/sw/node_modules/
+
+##### Compile the Angular webgui #################
+RUN npm install -g @angular/cli
+
+WORKDIR /root/webgui/webclient/bayt/sw
+RUN ng build --configuration production --aot --base-href /bayt/
+
+RUN cd /opt
+RUN mkdir bayt
+RUN cd bayt
+RUN mkdir webgui
+RUN cd webgui
+WORKDIR /opt/bayt/webgui
+RUN cp -r /root/webgui/webclient/bayt/sw/dist/sw .
+
+WORKDIR /opt/bayt
+RUN mkdir granada
+RUN cd granada
+WORKDIR /opt/bayt/granada
+
+# copy from previoud build stage
+RUN cp /root/granada/ix86_64x/uniservice .
+
 CMD ./uniservice
