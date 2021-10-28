@@ -70,7 +70,7 @@ RUN cp -r /root/webgui/webclient/bayt/sw/node_modules/primeicons /tmp
 RUN cp -r /root/webgui/webclient/bayt/sw/node_modules/ngx-draggable-resize /tmp
 
 
-##########3 installing dependencies node_module ######################
+########## installing dependencies node_module ######################
 RUN apt-get -y install curl
 RUN curl -sL https://deb.nodesource.com/setup_14.x | bash -
 RUN apt-get -y install nodejs
@@ -106,4 +106,6 @@ WORKDIR /opt/bayt/granada
 # copy from previoud build stage
 RUN cp /root/granada/ix86_64x/uniservice .
 
-CMD ./uniservice
+# CMD_ARGS will be : --server-ip <ip> --server-port <port>  --server-worker <number of worker> --mongo-db-name <name> --mongo-db-connection-pool <conn-pool> --mongo-db-uri <uri>
+ARG CMD_ARGS
+CMD ./uniservice ${CMD_ARGS}
